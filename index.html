@@ -1,0 +1,2100 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>漫威英雄：無限守護戰 (Marvel Heroes: Infinite Defense) - 終極進化重製版</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #020306;
+            color: #fff;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            position: relative;
+            box-shadow: 0 0 50px rgba(0, 210, 255, 0.3), inset 0 0 30px rgba(0,0,0,0.9);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 4px solid #111a2e;
+            background: #04060b;
+        }
+        canvas {
+            display: block;
+            background: radial-gradient(circle, #0c101d 0%, #020306 100%);
+            cursor: none; 
+        }
+        
+        /* 科技感防護罩與濾鏡 */
+        .sci-fi-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%), linear-gradient(90deg, rgba(0, 210, 255, 0.02), rgba(0, 0, 0, 0), rgba(255, 0, 0, 0.02));
+            background-size: 100% 4px, 6px 100%;
+            z-index: 4;
+            opacity: 0.9;
+        }
+        
+        .vignette {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.95);
+            z-index: 3;
+        }
+
+        /* HUD 數據顯示器 */
+        .hud {
+            position: absolute;
+            top: 15px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 25px;
+            font-family: 'Impact', 'Segoe UI', sans-serif;
+            font-size: 16px;
+            letter-spacing: 1.5px;
+            color: #00d2ff;
+            text-shadow: 0 0 10px rgba(0, 210, 255, 0.6);
+            pointer-events: none;
+            z-index: 5;
+        }
+        .hud-item {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .hud-item.right {
+            align-items: flex-end;
+        }
+        .hud-label {
+            font-size: 11px;
+            color: #4a6885;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .bar-container {
+            width: 160px;
+            height: 12px;
+            background: rgba(0,0,0,0.7);
+            border: 2px solid #142238;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        .bar {
+            height: 100%;
+            width: 100%;
+            transition: width 0.15s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        #hp-bar { 
+            background: linear-gradient(90deg, #ff1f1f, #ff5e5e); 
+            box-shadow: 0 0 12px rgba(255, 31, 31, 0.8); 
+        }
+        #shield-bar {
+            background: linear-gradient(90deg, #00b0ff, #80d8ff);
+            box-shadow: 0 0 12px rgba(0, 176, 255, 0.8);
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        #ult-bar { 
+            background: linear-gradient(90deg, #ff9f00, #ffe600); 
+            box-shadow: 0 0 12px rgba(255, 159, 0, 0.8); 
+        }
+
+        /* 介面覆蓋層 */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(3, 5, 10, 0.97);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            padding: 20px;
+        }
+        .overlay.hidden {
+            display: none;
+        }
+        h1 {
+            font-family: 'Impact', sans-serif;
+            font-size: 52px;
+            color: #ff2a2a;
+            margin: 0 0 5px 0;
+            text-shadow: 0 0 20px rgba(255, 42, 42, 0.7), 3px 3px 0 #000;
+            letter-spacing: 4px;
+        }
+        .sub-title {
+            color: #00d2ff;
+            font-size: 15px;
+            text-transform: uppercase;
+            letter-spacing: 6px;
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px rgba(0, 210, 255, 0.7);
+        }
+        
+        /* 角色精美選擇面板 */
+        .hero-select {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            width: 100%;
+            max-width: 740px;
+            margin-bottom: 25px;
+        }
+        .hero-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.01) 0%, rgba(255,255,255,0.04) 100%);
+            border: 2px solid #1a273b;
+            border-radius: 12px;
+            padding: 20px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .hero-card:hover {
+            background: rgba(0, 210, 255, 0.06);
+            border-color: #00d2ff;
+            transform: translateY(-8px);
+            box-shadow: 0 10px 25px rgba(0, 210, 255, 0.25);
+        }
+        .hero-card.selected {
+            background: rgba(255, 42, 42, 0.1);
+            border-color: #ff3838;
+            box-shadow: 0 0 20px rgba(255, 42, 42, 0.35);
+        }
+        .hero-avatar {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 12px auto;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            background: #0f1524;
+            border: 2px solid #23324d;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+            transition: transform 0.3s;
+        }
+        .hero-card:hover .hero-avatar {
+            transform: scale(1.1) rotate(5deg);
+        }
+        .hero-name {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 6px;
+            letter-spacing: 0.5px;
+        }
+        .hero-desc {
+            font-size: 11px;
+            color: #8fa0ba;
+            line-height: 1.4;
+        }
+
+        /* 動作按鈕 */
+        .btn-action {
+            padding: 14px 45px;
+            font-size: 18px;
+            font-weight: bold;
+            background: #ff3838;
+            color: white;
+            border: 2px solid #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(255, 56, 56, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: transform 0.1s, background 0.2s, box-shadow 0.2s;
+        }
+        .btn-action:active {
+            transform: scale(0.97);
+        }
+        .btn-action:hover {
+            background: #ff5252;
+            box-shadow: 0 5px 25px rgba(255, 56, 56, 0.7);
+        }
+
+        /* BGM與音效開關控制 */
+        .audio-controls {
+            position: absolute;
+            bottom: 20px;
+            display: flex;
+            gap: 15px;
+            z-index: 6;
+        }
+        .audio-toggle {
+            background: rgba(22, 31, 48, 0.6);
+            border: 1px solid #324463;
+            color: #8fa0ba;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .audio-toggle:hover {
+            background: rgba(0, 210, 255, 0.15);
+            color: #00d2ff;
+            border-color: #00d2ff;
+        }
+        .audio-toggle.active {
+            background: rgba(0, 210, 255, 0.25);
+            color: #fff;
+            border-color: #00d2ff;
+            box-shadow: 0 0 10px rgba(0, 210, 255, 0.4);
+        }
+
+        /* Roguelite 升級選卡介面 */
+        .upgrade-select {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            width: 100%;
+            max-width: 680px;
+            margin-top: 25px;
+            margin-bottom: 25px;
+        }
+        .upgrade-card {
+            background: linear-gradient(135deg, #0e1626 0%, #070b14 100%);
+            border: 2px solid #1a2c4c;
+            border-radius: 12px;
+            padding: 25px 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .upgrade-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: #ffe600;
+        }
+        .upgrade-card:hover {
+            border-color: #ffe600;
+            transform: translateY(-8px);
+            box-shadow: 0 10px 25px rgba(255, 230, 0, 0.2);
+        }
+        .upgrade-icon {
+            font-size: 36px;
+            margin-bottom: 12px;
+        }
+        .upgrade-name {
+            font-weight: bold;
+            font-size: 18px;
+            color: #ffe600;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+        .upgrade-desc {
+            font-size: 12px;
+            color: #a5b9cc;
+            line-height: 1.5;
+        }
+
+        /* 行動端虛擬操控 */
+        #controls {
+            display: flex;
+            width: 100%;
+            max-width: 800px;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 25px;
+            background: #06090e;
+            border-bottom-left-radius: 16px;
+            border-bottom-right-radius: 16px;
+            border-top: 2px solid #121824;
+        }
+        .joystick-zone {
+            display: flex;
+            gap: 12px;
+        }
+        .action-zone {
+            display: flex;
+            gap: 15px;
+        }
+        .ctrl-btn {
+            width: 60px;
+            height: 60px;
+            background: #121b2b;
+            border: 2px solid #283a54;
+            border-radius: 50%;
+            color: #fff;
+            font-weight: bold;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #04060b;
+            touch-action: none;
+        }
+        .ctrl-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #04060b;
+            background: #1f2d47;
+        }
+        .ctrl-btn.orange {
+            background: linear-gradient(135deg, #ff9f00 0%, #fb5607 100%);
+            border-color: #ff9f00;
+            box-shadow: 0 4px 0 #800e13;
+            color: #000;
+        }
+        .ctrl-btn.orange:active {
+            background: #fb5607;
+        }
+
+        .keyboard-tip {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #3b4e6b;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <!-- 掃描線與科幻暗角 -->
+        <div class="sci-fi-overlay"></div>
+        <div class="vignette"></div>
+
+        <!-- HUD 數據 -->
+        <div class="hud">
+            <div class="hud-item">
+                <span id="armor-hud-label" class="hud-label">HERO SYSTEMS</span>
+                <div class="bar-container">
+                    <div id="hp-bar" class="bar"></div>
+                    <div id="shield-bar" class="bar" style="width: 0%;"></div>
+                </div>
+            </div>
+            <div class="hud-item" style="align-items: center;">
+                <span id="wave-text" style="color:#ffe600; font-size:24px; letter-spacing: 2px;">WAVE 1</span>
+                <span id="score-text" style="font-size:13px; color:#5b7794; font-family:monospace;">SCORE: 00000</span>
+            </div>
+            <div class="hud-item right">
+                <span class="hud-label">ULTIMATE CHARGE</span>
+                <div class="bar-container" style="border-color: #ffbe0b;">
+                    <div id="ult-bar" class="bar" style="width: 0%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 畫布 -->
+        <canvas id="gameCanvas" width="800" height="480"></canvas>
+
+        <!-- 英雄大廳 -->
+        <div id="lobby-overlay" class="overlay">
+            <h1>MARVEL HEROES</h1>
+            <div class="sub-title">無限守護戰</div>
+            
+            <p style="color: #5b7794; margin-bottom: 20px; font-size: 14px;">請選擇出戰的復仇者聯盟成員：</p>
+            
+            <div class="hero-select">
+                <div class="hero-card selected" data-hero="ironman">
+                    <div class="hero-avatar" style="border: 2px solid #ffbe0b;">🚀</div>
+                    <div class="hero-name" style="color: #ff3838;">鋼鐵人</div>
+                    <div class="hero-desc">高速掌心雷射<br>【能源護盾】被動<br><b style="color:#ffe600;">大招:胸口衝擊單束巨炮</b></div>
+                </div>
+                <div class="hero-card" data-hero="cap">
+                    <div class="hero-avatar" style="border: 2px solid #38bdf8;">🛡️</div>
+                    <div class="hero-name" style="color: #38bdf8;">美國隊長</div>
+                    <div class="hero-desc">連環彈射振金盾<br>【振金格擋】30%減傷<br><b style="color:#ffe600;">大招:振金重力爆震</b></div>
+                </div>
+                <div class="hero-card" data-hero="thor">
+                    <div class="hero-avatar" style="border: 2px solid #a78bfa;">⚡</div>
+                    <div class="hero-name" style="color: #c084fc;">雷神索爾</div>
+                    <div class="hero-desc">重擊穿透之鎚<br>【雷霆領域】自動落雷<br><b style="color:#ffe600;">大招:神域萬雷轟擊</b></div>
+                </div>
+                <div class="hero-card" data-hero="spiderman">
+                    <div class="hero-avatar" style="border: 2px solid #f43f5e;">🕷️</div>
+                    <div class="hero-name" style="color: #f43f5e;">蜘蛛人</div>
+                    <div class="hero-desc">高速牽制蛛網<br>【蜘蛛感應】25%閃避<br><b style="color:#ffe600;">大招:天羅地網引力陣</b></div>
+                </div>
+            </div>
+
+            <button class="btn-action" id="start-btn">進入戰場</button>
+            <div style="margin-top: 15px; font-size: 13px; color: #425573; line-height: 1.6; text-align: center;">
+                鍵盤：<b>[W][A][S][D]</b> 移動，<b>滑鼠</b> 瞄準，<b>滑鼠左鍵</b> 射擊。<br>
+                按 <b>[空白鍵] (SPACE)</b> 釋放終極大招！
+            </div>
+            
+            <div class="audio-controls">
+                <button id="bgm-toggle" class="audio-toggle active">🎵 電子BGM: 開啟</button>
+            </div>
+        </div>
+
+        <!-- Roguelite 戰術升級艙 -->
+        <div id="upgrade-overlay" class="overlay hidden">
+            <h1 style="color: #ffe600; text-shadow: 0 0 15px rgba(255, 230, 0, 0.4);">SHIELD UPGRADE</h1>
+            <div class="sub-title" style="color: #a5b9cc; letter-spacing: 3px;">神盾局戰術升級艙</div>
+            <p style="color: #5b7794; font-size: 14px;">請選擇一項戰術科技來強化你的英雄：</p>
+            
+            <div class="upgrade-select" id="upgrade-options-container">
+                <!-- 隨機卡片動態渲染於此 -->
+            </div>
+        </div>
+
+        <!-- 遊戲結束/敗北畫面 -->
+        <div id="gameover-overlay" class="overlay hidden">
+            <h1 id="end-title" style="color: #ff3838;">MISSION FAILED</h1>
+            <p id="end-desc" style="font-size: 16px; margin-bottom: 20px; color: #8fa0ba;">防線已被瓦解！薩諾斯奪取了無限寶石...</p>
+            <p id="end-score" style="color: #ffe600; font-weight: bold; font-size: 24px; margin-bottom: 25px; text-shadow: 0 0 10px rgba(255,230,0,0.5);">SCORE：0</p>
+            <button class="btn-action" id="restart-btn">重新集結</button>
+        </div>
+    </div>
+
+    <!-- 行動裝置操控 -->
+    <div id="controls">
+        <div class="joystick-zone">
+            <div class="ctrl-btn" id="btn-left">←</div>
+            <div class="ctrl-btn" id="btn-right">→</div>
+            <div class="ctrl-btn" id="btn-up">↑</div>
+            <div class="ctrl-btn" id="btn-down">↓</div>
+        </div>
+        <div class="action-zone">
+            <div class="ctrl-btn orange" id="btn-ult" style="font-size:15px; font-family:'Impact';">ULT</div>
+            <div class="ctrl-btn red" id="btn-fire">FIRE</div>
+        </div>
+    </div>
+
+    <div class="keyboard-tip">
+        提示：若鍵盤無反應，請點擊上方遊戲畫面重新聚焦。
+    </div>
+
+<script>
+// ==========================================
+// 音效合成引擎 (Web Audio API)
+// ==========================================
+class SoundSynth {
+    constructor() {
+        this.ctx = null;
+        this.bgmNode = null;
+        this.bgmEnabled = true;
+        this.bgmSequence = [
+            110, 110, 130, 110, 165, 147, 110, 130,
+            110, 110, 130, 110, 196, 165, 147, 130
+        ];
+        this.bgmStep = 0;
+        this.bgmInterval = null;
+    }
+    init() {
+        if (!this.ctx) {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (this.bgmEnabled && !this.bgmInterval) {
+            this.startBGM();
+        }
+    }
+    toggleBGM() {
+        this.bgmEnabled = !this.bgmEnabled;
+        if (this.bgmEnabled) {
+            this.init();
+            this.startBGM();
+        } else {
+            this.stopBGM();
+        }
+        return this.bgmEnabled;
+    }
+    startBGM() {
+        if (this.bgmInterval) clearInterval(this.bgmInterval);
+        this.bgmInterval = setInterval(() => {
+            if (gameState !== "playing" || !this.ctx) return;
+            const freq = this.bgmSequence[this.bgmStep];
+            
+            let osc = this.ctx.createOscillator();
+            let gain = this.ctx.createGain();
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+            // 復古電子Bass鼓點
+            gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.22);
+            
+            osc.start();
+            osc.stop(this.ctx.currentTime + 0.25);
+            
+            this.bgmStep = (this.bgmStep + 1) % this.bgmSequence.length;
+        }, 250);
+    }
+    stopBGM() {
+        if (this.bgmInterval) {
+            clearInterval(this.bgmInterval);
+            this.bgmInterval = null;
+        }
+    }
+    playLaser() {
+        this.init(); if (!this.ctx) return;
+        let osc = this.ctx.createOscillator();
+        let gain = this.ctx.createGain();
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(850, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.12);
+    }
+    playShield() {
+        this.init(); if (!this.ctx) return;
+        let osc = this.ctx.createOscillator();
+        let gain = this.ctx.createGain();
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(450, this.ctx.currentTime);
+        osc.frequency.setValueAtTime(950, this.ctx.currentTime + 0.05);
+        gain.gain.setValueAtTime(0.06, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.15);
+    }
+    playLightning() {
+        this.init(); if (!this.ctx) return;
+        let osc = this.ctx.createOscillator();
+        let gain = this.ctx.createGain();
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(90, this.ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(1300, this.ctx.currentTime + 0.16);
+        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.16);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.16);
+    }
+    playWeb() {
+        this.init(); if (!this.ctx) return;
+        let osc = this.ctx.createOscillator();
+        let gain = this.ctx.createGain();
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(320, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.1);
+    }
+    playExplosion() {
+        this.init(); if (!this.ctx) return;
+        let osc = this.ctx.createOscillator();
+        let gain = this.ctx.createGain();
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(100, this.ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(15, this.ctx.currentTime + 0.35);
+        gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.4);
+    }
+    playUltimate() {
+        this.init(); if (!this.ctx) return;
+        let osc = this.ctx.createOscillator();
+        let gain = this.ctx.createGain();
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(110, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1600, this.ctx.currentTime + 0.5);
+        gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.6);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.6);
+    }
+    playDeath() {
+        this.init(); if (!this.ctx) return;
+        let osc = this.ctx.createOscillator();
+        let gain = this.ctx.createGain();
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(260, this.ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(30, this.ctx.currentTime + 1.0);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 1.0);
+        osc.start(); osc.stop(this.ctx.currentTime + 1.0);
+    }
+    playWin() {
+        this.init(); if (!this.ctx) return;
+        const notes = [261, 329, 392, 523, 659, 784, 987, 1046];
+        notes.forEach((freq, i) => {
+            let osc = this.ctx.createOscillator();
+            let gain = this.ctx.createGain();
+            osc.connect(gain); gain.connect(this.ctx.destination);
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime + i * 0.12);
+            gain.gain.setValueAtTime(0.06, this.ctx.currentTime + i * 0.12);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + (i + 1) * 0.12);
+            osc.start(this.ctx.currentTime + i * 0.12);
+            osc.stop(this.ctx.currentTime + (i + 1) * 0.12);
+        });
+    }
+}
+
+const sfx = new SoundSynth();
+
+// ==========================================
+// 遊戲全域配置
+// ==========================================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const WIDTH = 800;
+const HEIGHT = 480;
+
+let chosenHero = "ironman"; 
+let score = 0;
+let wave = 1;
+let gameState = "start"; // start, playing, upgrade, gameover
+let gameFrame = 0;
+let screenShake = 0;
+let isMobileMode = false; 
+
+// Roguelite 升級相關狀態
+let upgradePool = [];
+const PERK_MODIFIERS = {
+    fireRate: 1.0,      // 射速乘數 (越小越快)
+    maxHpAdd: 0,        // 最大HP加成
+    speedMult: 1.0,     // 移速乘數
+    ultChargeMult: 1.0, // 大招獲取率
+    bonusDamage: 0      // 額外攻擊傷害
+};
+
+// 控制輸入
+const keys = { up: false, down: false, left: false, right: false, ult: false, mousePressed: false };
+const mouse = { x: WIDTH/2, y: HEIGHT/2 };
+
+// 粒子與特效
+let particles = [];
+let damageNumbers = []; 
+let thrusterParticles = []; 
+let meteors = []; // 薩諾斯的隕石群
+
+function spawnExplosion(x, y, color, count = 12, sizeFactor = 1) {
+    for(let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = (Math.random() * 5 + 2) * sizeFactor;
+        particles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            radius: (Math.random() * 3.5 + 1.5) * sizeFactor,
+            color: color,
+            alpha: 1,
+            decay: Math.random() * 0.02 + 0.015
+        });
+    }
+}
+
+function spawnDamageText(x, y, text, color = "#fff", isCrit = false) {
+    damageNumbers.push({
+        x: x,
+        y: y - 10,
+        vx: (Math.random() - 0.5) * 3,
+        vy: -Math.random() * 3 - 2,
+        text: text,
+        color: color,
+        alpha: 1,
+        size: isCrit ? 22 : 14,
+        weight: isCrit ? "bold" : "normal",
+        life: 35
+    });
+}
+
+// ==========================================
+// 英雄類別 (Hero)
+// ==========================================
+class Hero {
+    constructor(type) {
+        this.type = type;
+        this.reset();
+    }
+
+    reset() {
+        this.x = WIDTH / 2;
+        this.y = HEIGHT - 80;
+        this.radius = 20;
+        this.hp = 100 + PERK_MODIFIERS.maxHpAdd;
+        this.maxHp = 100 + PERK_MODIFIERS.maxHpAdd;
+        
+        // 鋼鐵人能源護盾
+        this.shield = this.type === "ironman" ? 30 : 0;
+        this.maxShield = this.type === "ironman" ? 30 : 0;
+        this.lastHitFrame = 0;
+
+        this.speed = 4.8 * PERK_MODIFIERS.speedMult;
+        this.ultProgress = 0; 
+        this.shootCooldown = 0;
+        this.ultActiveTimer = 0; 
+        this.angle = 0; 
+
+        // 雷神落雷被動冷卻
+        this.thorAuraTimer = 0;
+    }
+
+    update() {
+        if (this.ultActiveTimer > 0) this.ultActiveTimer--;
+
+        // 玩家移動
+        let dx = 0;
+        let dy = 0;
+        if (keys.left) dx -= this.speed;
+        if (keys.right) dx += this.speed;
+        if (keys.up) dy -= this.speed;
+        if (keys.down) dy += this.speed;
+
+        this.x += dx;
+        this.y += dy;
+
+        this.x = Math.max(this.radius, Math.min(WIDTH - this.radius, this.x));
+        this.y = Math.max(this.radius, Math.min(HEIGHT - this.radius, this.y));
+
+        // 計算朝向滑鼠弧度
+        this.angle = Math.atan2(mouse.y - this.y, mouse.x - this.x);
+
+        // 噴射尾焰
+        if (this.type === "ironman" && Math.random() > 0.3) {
+            const backAngle = this.angle + Math.PI + (Math.random() - 0.5) * 0.4;
+            thrusterParticles.push({
+                x: this.x - Math.cos(this.angle) * 15,
+                y: this.y - Math.sin(this.angle) * 15,
+                vx: Math.cos(backAngle) * (Math.random() * 5 + 4) + (dx * 0.5),
+                vy: Math.sin(backAngle) * (Math.random() * 5 + 4) + (dy * 0.5),
+                radius: Math.random() * 4 + 2,
+                color: Math.random() > 0.5 ? "#ffe600" : "#ff3838",
+                alpha: 1,
+                decay: 0.04
+            });
+        }
+
+        // 鋼鐵人護盾自體修復
+        if (this.type === "ironman" && this.shield < this.maxShield) {
+            if (gameFrame - this.lastHitFrame > 240) { // 4秒沒受傷
+                this.shield = Math.min(this.maxShield, this.shield + 0.15);
+                updateHUD();
+            }
+        }
+
+        // 雷神雷霆領域被動
+        if (this.type === "thor" && !this.isDead) {
+            this.thorAuraTimer++;
+            if (this.thorAuraTimer >= 120) { // 每2秒自動落雷附近小兵
+                this.thorAuraTimer = 0;
+                let nearby = enemies.filter(e => !e.isDead && Math.hypot(e.x - this.x, e.y - this.y) < 220);
+                if (nearby.length > 0) {
+                    let target = nearby[Math.floor(Math.random() * nearby.length)];
+                    ultimates.push(new UltimateEffect(target.x, target.y, "lightning_bolt", "#c084fc", 0));
+                    sfx.playLightning();
+                }
+            }
+        }
+
+        // 射擊冷卻
+        if (this.shootCooldown > 0) this.shootCooldown--;
+
+        // 手機自動導向
+        if (isMobileMode && keys.mousePressed && enemies.length > 0) {
+            let closest = null;
+            let minDist = Infinity;
+            for (let enemy of enemies) {
+                let d = Math.hypot(enemy.x - this.x, enemy.y - this.y);
+                if (d < minDist) {
+                    minDist = d;
+                    closest = enemy;
+                }
+            }
+            if (closest) {
+                mouse.x = closest.x;
+                mouse.y = closest.y;
+                this.angle = Math.atan2(mouse.y - this.y, mouse.x - this.x);
+            }
+        }
+
+        if (keys.mousePressed && this.shootCooldown === 0) {
+            this.fire();
+        }
+
+        if (keys.ult && this.ultProgress >= 100) {
+            this.useUltimate();
+        }
+    }
+
+    fire() {
+        const dmgBonus = PERK_MODIFIERS.bonusDamage;
+        if (this.type === "ironman") {
+            sfx.playLaser();
+            const offset = (Math.random() - 0.5) * 0.05;
+            projectiles.push(new Projectile(this.x, this.y, this.angle + offset, 15, "laser", "#ff3838", 12 + dmgBonus));
+            this.shootCooldown = 10 * PERK_MODIFIERS.fireRate; 
+        } 
+        else if (this.type === "cap") {
+            const alreadyHasShield = projectiles.some(p => p.type === "shield");
+            if (!alreadyHasShield) {
+                sfx.playShield();
+                projectiles.push(new Projectile(this.x, this.y, this.angle, 12, "shield", "#38bdf8", 22 + dmgBonus));
+            }
+        } 
+        else if (this.type === "thor") {
+            sfx.playLightning();
+            projectiles.push(new Projectile(this.x, this.y, this.angle, 9, "thunderball", "#a78bfa", 30 + dmgBonus));
+            this.shootCooldown = 20 * PERK_MODIFIERS.fireRate; 
+        } 
+        else if (this.type === "spiderman") {
+            sfx.playWeb();
+            projectiles.push(new Projectile(this.x, this.y, this.angle, 16, "web", "#f43f5e", 8 + dmgBonus));
+            projectiles.push(new Projectile(this.x, this.y, this.angle - 0.15, 15.5, "web", "#f43f5e", 6 + dmgBonus));
+            projectiles.push(new Projectile(this.x, this.y, this.angle + 0.15, 15.5, "web", "#f43f5e", 6 + dmgBonus));
+            this.shootCooldown = 14 * PERK_MODIFIERS.fireRate; 
+        }
+    }
+
+    useUltimate() {
+        sfx.playUltimate();
+        this.ultProgress = 0;
+        this.ultActiveTimer = 40; 
+        screenShake = 22;
+        updateHUD();
+
+        if (this.type === "ironman") {
+            ultimates.push(new UltimateEffect(this.x, this.y, "unibeam", "#ffe600", this.angle));
+        } 
+        else if (this.type === "cap") {
+            ultimates.push(new UltimateEffect(this.x, this.y, "vibranium_shockwave", "#38bdf8", 0));
+        } 
+        else if (this.type === "thor") {
+            for (let i = 0; i < 20; i++) {
+                setTimeout(() => {
+                    if (gameState !== "playing") return;
+                    const rx = Math.random() * WIDTH;
+                    const ry = Math.random() * HEIGHT;
+                    ultimates.push(new UltimateEffect(rx, ry, "lightning_bolt", "#c084fc", 0));
+                    sfx.playLightning();
+                    screenShake = 6;
+                }, i * 50);
+            }
+        } 
+        else if (this.type === "spiderman") {
+            ultimates.push(new UltimateEffect(WIDTH/2, HEIGHT/2, "web_barrage", "#f43f5e", 0));
+        }
+    }
+
+    takeDamage(amount) {
+        // 蜘蛛人被動：蜘蛛感應有 25% 機率閃避
+        if (this.type === "spiderman" && Math.random() < 0.25) {
+            spawnDamageText(this.x, this.y - 20, "DODGE", "#38bdf8", true);
+            return;
+        }
+
+        // 美國隊長被動：振金防禦 30% 常駐減傷
+        if (this.type === "cap") {
+            amount *= 0.7;
+        }
+
+        this.lastHitFrame = gameFrame;
+
+        // 鋼鐵人先扣護盾
+        if (this.type === "ironman" && this.shield > 0) {
+            this.shield -= amount;
+            if (this.shield < 0) {
+                this.hp += this.shield; // 把溢出傷害扣回 HP
+                this.shield = 0;
+            }
+        } else {
+            this.hp -= amount;
+        }
+
+        screenShake = 6;
+        updateHUD();
+
+        if (this.hp <= 0) {
+            handleGameOver();
+        }
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+
+        if (this.ultActiveTimer > 0) {
+            ctx.shadowBlur = 30;
+            ctx.shadowColor = "#ffbe0b";
+            ctx.strokeStyle = "#fff";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius + 6, 0, Math.PI*2);
+            ctx.stroke();
+        }
+
+        // 如果是鋼鐵人，繪製發光的盾牌外層
+        if (this.type === "ironman" && this.shield > 0) {
+            ctx.strokeStyle = "rgba(0, 176, 255, " + (0.3 + (this.shield / this.maxShield) * 0.5) + ")";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius + 3, 0, Math.PI*2);
+            ctx.stroke();
+        }
+
+        if (this.type === "ironman") {
+            ctx.fillStyle = "#e63946"; 
+            ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#ffe600";
+            ctx.fillRect(2, -7, 10, 14);
+            ctx.fillStyle = "#00f0ff";
+            ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI*2); ctx.fill();
+            ctx.fillRect(8, -5, 3, 2);
+            ctx.fillRect(8, 3, 3, 2);
+        } 
+        else if (this.type === "cap") {
+            ctx.fillStyle = "#1d3557"; 
+            ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#fff";
+            ctx.font = "bold 13px 'Segoe UI'";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("★", 0, 0);
+            ctx.fillStyle = "#fff";
+            ctx.fillText("A", 10, -5);
+            ctx.fillStyle = "#e63946";
+            ctx.fillRect(-12, -10, 4, 20);
+        } 
+        else if (this.type === "thor") {
+            ctx.fillStyle = "#e63946"; 
+            ctx.fillRect(-18, -14, 12, 28);
+            ctx.fillStyle = "#3a4f66"; 
+            ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#8ec5fc";
+            ctx.beginPath();
+            ctx.arc(-4, -6, 3, 0, Math.PI*2); ctx.arc(-4, 6, 3, 0, Math.PI*2);
+            ctx.arc(4, -6, 3, 0, Math.PI*2); ctx.arc(4, 6, 3, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = "#f1c40f";
+            ctx.beginPath(); ctx.arc(-8, 0, 10, -Math.PI/2, Math.PI/2, true); ctx.fill();
+        } 
+        else if (this.type === "spiderman") {
+            ctx.fillStyle = "#e63946"; 
+            ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#005f73";
+            ctx.fillRect(-12, -15, 8, 8);
+            ctx.fillRect(-12, 7, 8, 8);
+            ctx.fillStyle = "#fff";
+            ctx.strokeStyle = "#000";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(8, -8); ctx.lineTo(15, -4); ctx.lineTo(10, -1); ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(8, 8); ctx.lineTo(15, 4); ctx.lineTo(10, 1); ctx.closePath(); ctx.fill(); ctx.stroke();
+        }
+
+        ctx.restore();
+    }
+}
+
+// ==========================================
+// 玩家子彈類別 (Projectile)
+// ==========================================
+class Projectile {
+    constructor(x, y, angle, speed, type, color, damage) {
+        this.x = x;
+        this.y = y;
+        this.angle = angle;
+        this.speed = speed;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+        this.type = type; 
+        this.color = color;
+        this.damage = damage;
+        this.radius = 6;
+        this.toRemove = false;
+
+        this.shieldStage = "out"; 
+        this.shieldTimer = 50; 
+        this.bounceCount = 0; 
+    }
+
+    update() {
+        if (this.type === "shield") {
+            this.radius = 13;
+            if (this.shieldStage === "out") {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.shieldTimer--;
+                if (this.shieldTimer <= 0) this.shieldStage = "return";
+            } else {
+                const dx = hero.x - this.x;
+                const dy = hero.y - this.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < 22) {
+                    this.toRemove = true; 
+                } else {
+                    this.x += (dx / dist) * this.speed;
+                    this.y += (dy / dist) * this.speed;
+                }
+            }
+        } 
+        else if (this.type === "thunderball") {
+            this.radius = 12;
+            this.x += this.vx;
+            this.y += this.vy;
+            
+            if (Math.random() > 0.4) {
+                thrusterParticles.push({
+                    x: this.x,
+                    y: this.y,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: (Math.random() - 0.5) * 3,
+                    radius: Math.random() * 2 + 1,
+                    color: "#a78bfa",
+                    alpha: 1,
+                    decay: 0.05
+                });
+            }
+
+            if (this.x < 0 || this.x > WIDTH || this.y < 0 || this.y > HEIGHT) {
+                this.toRemove = true;
+            }
+        }
+        else {
+            this.x += this.vx;
+            this.y += this.vy;
+            if (this.x < 0 || this.x > WIDTH || this.y < 0 || this.y > HEIGHT) {
+                this.toRemove = true;
+            }
+        }
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = this.color;
+
+        if (this.type === "laser") {
+            ctx.fillStyle = this.color;
+            ctx.rotate(this.angle);
+            ctx.fillRect(-15, -3, 30, 6);
+            ctx.fillStyle = "#fff"; 
+            ctx.fillRect(-10, -1, 20, 2);
+        } 
+        else if (this.type === "shield") {
+            ctx.rotate(gameFrame * 0.22);
+            ctx.fillStyle = "#ff3838"; 
+            ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#fff"; 
+            ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#1d3557"; 
+            ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#fff";
+            ctx.font = "bold 9px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("★", 0, 0);
+        } 
+        else if (this.type === "thunderball") {
+            ctx.rotate(gameFrame * 0.18);
+            ctx.fillStyle = "#c0c0c0";
+            ctx.fillRect(-10, -6, 20, 12);
+            ctx.fillStyle = "#8a8a8a";
+            ctx.fillRect(-12, -8, 4, 16);
+            ctx.fillRect(8, -8, 4, 16);
+            ctx.fillStyle = "#5c5c5c"; 
+            ctx.fillRect(-1, 6, 2, 12);
+        } 
+        else if (this.type === "web") {
+            ctx.strokeStyle = "#fff";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, 0, 8, 0, Math.PI*2);
+            ctx.stroke();
+            ctx.strokeStyle = "rgba(255,255,255,0.6)";
+            ctx.lineWidth = 1;
+            for (let a = 0; a < Math.PI*2; a += Math.PI/4) {
+                ctx.beginPath();
+                ctx.moveTo(0,0);
+                ctx.lineTo(Math.cos(a)*8, Math.sin(a)*8);
+                ctx.stroke();
+            }
+        }
+
+        ctx.restore();
+    }
+}
+
+// ==========================================
+// 終極大招特效類別 (UltimateEffect)
+// ==========================================
+class UltimateEffect {
+    constructor(x, y, type, color, angle = 0) {
+        this.x = x;
+        this.y = y;
+        this.type = type;
+        this.color = color;
+        this.angle = angle;
+        this.life = 45; 
+        this.maxLife = 45;
+        this.toRemove = false;
+        this.radius = 10;
+    }
+
+    update() {
+        this.life--;
+        if (this.life <= 0) this.toRemove = true;
+
+        if (this.type === "unibeam") {
+            this.x = hero.x;
+            this.y = hero.y;
+            this.angle = hero.angle; 
+            
+            for (let enemy of enemies) {
+                if (enemy.isDead) continue;
+                const dx = enemy.x - this.x;
+                const dy = enemy.y - this.y;
+                const dist = Math.hypot(dx, dy);
+                const enemyAngle = Math.atan2(dy, dx);
+                let diff = Math.abs(enemyAngle - this.angle);
+                if (diff > Math.PI) diff = Math.PI*2 - diff;
+
+                if (diff < 0.12 && dist < 900) {
+                    enemy.takeDamage(2.2 + PERK_MODIFIERS.bonusDamage * 0.1, "energy");
+                    enemy.x += Math.cos(this.angle) * 3;
+                    enemy.y += Math.sin(this.angle) * 3;
+                    if (Math.random() > 0.7) spawnExplosion(enemy.x, enemy.y, this.color, 2, 0.5);
+                }
+            }
+        } 
+        else if (this.type === "vibranium_shockwave") {
+            this.radius = ((this.maxLife - this.life) / this.maxLife) * 360;
+            for (let enemy of enemies) {
+                if (enemy.isDead) continue;
+                const dx = enemy.x - this.x;
+                const dy = enemy.y - this.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < this.radius + enemy.radius && dist > this.radius - 50) {
+                    enemy.takeDamage(3 + PERK_MODIFIERS.bonusDamage * 0.1, "physical");
+                    enemy.x += (dx / dist) * 12;
+                    enemy.y += (dy / dist) * 12;
+                }
+            }
+        } 
+        else if (this.type === "lightning_bolt") {
+            if (this.life === this.maxLife - 6) {
+                for (let enemy of enemies) {
+                    if (enemy.isDead) continue;
+                    const dx = enemy.x - this.x;
+                    const dy = enemy.y - this.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist < 120) {
+                        enemy.takeDamage(45 + PERK_MODIFIERS.bonusDamage * 1.5, "lightning");
+                        spawnChainLightning(this.x, this.y, enemy);
+                    }
+                }
+                spawnExplosion(this.x, this.y, "#c084fc", 18, 1.2);
+            }
+        } 
+        else if (this.type === "web_barrage") {
+            for (let enemy of enemies) {
+                if (enemy.isDead) continue;
+                enemy.stunTimer = 65; 
+                enemy.takeDamage(1.1 + PERK_MODIFIERS.bonusDamage * 0.05, "web"); 
+                
+                const dx = WIDTH/2 - enemy.x;
+                const dy = HEIGHT/2 - enemy.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist > 30) {
+                    enemy.x += (dx / dist) * 4.5;
+                    enemy.y += (dy / dist) * 4.5;
+                }
+            }
+        }
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = this.color;
+
+        if (this.type === "unibeam") {
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angle);
+            const beamW = 45 + Math.sin(gameFrame * 0.6) * 10;
+            ctx.fillStyle = "rgba(255,255,255,0.9)";
+            ctx.fillRect(0, -beamW/2, 900, beamW);
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = 6;
+            ctx.strokeRect(0, -beamW/2, 900, beamW);
+            ctx.fillStyle = "rgba(255,159,0,0.25)";
+            ctx.fillRect(0, -beamW, 900, beamW*2);
+        } 
+        else if (this.type === "vibranium_shockwave") {
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2);
+            ctx.stroke();
+            ctx.fillStyle = "rgba(0, 210, 255, 0.05)";
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2);
+            ctx.fill();
+        } 
+        else if (this.type === "lightning_bolt") {
+            if (this.life > 15) {
+                ctx.strokeStyle = "#fff";
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.moveTo(this.x, 0);
+                let currentY = 0;
+                let currentX = this.x;
+                while (currentY < this.y) {
+                    currentY += 35;
+                    currentX += (Math.random() - 0.5) * 50;
+                    ctx.lineTo(currentX, currentY);
+                }
+                ctx.stroke();
+            }
+        } 
+        else if (this.type === "web_barrage") {
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+            ctx.lineWidth = 2.5;
+            for(let i = 1; i <= 9; i++) {
+                ctx.beginPath();
+                ctx.arc(WIDTH/2, HEIGHT/2, i * 40, 0, Math.PI*2);
+                ctx.stroke();
+            }
+            for(let a = 0; a < Math.PI*2; a += Math.PI/6) {
+                ctx.beginPath();
+                ctx.moveTo(WIDTH/2, HEIGHT/2);
+                ctx.lineTo(WIDTH/2 + Math.cos(a)*550, HEIGHT/2 + Math.sin(a)*550);
+                ctx.stroke();
+            }
+        }
+
+        ctx.restore();
+    }
+}
+
+// 鏈狀閃電粒子
+function spawnChainLightning(sx, sy, firstEnemy) {
+    let currentSource = { x: sx, y: sy };
+    let targets = enemies.filter(e => e !== firstEnemy && !e.isDead);
+    let count = Math.min(3, targets.length);
+    let nextTarget = firstEnemy;
+
+    for (let i = 0; i < count; i++) {
+        if (!nextTarget) break;
+        const tx = nextTarget.x;
+        const ty = nextTarget.y;
+        nextTarget.takeDamage(15 + PERK_MODIFIERS.bonusDamage * 0.5, "lightning");
+        spawnExplosion(tx, ty, "#a78bfa", 5, 0.6);
+        currentSource = { x: tx, y: ty };
+        targets = targets.filter(t => t !== nextTarget);
+        nextTarget = targets[0]; 
+    }
+}
+
+// ==========================================
+// 敵軍類別 (Enemy)
+// ==========================================
+class Enemy {
+    constructor(x, y, type) {
+        this.x = x;
+        this.y = y;
+        this.type = type; // chitauri, ultron, brute, thanos
+        this.toRemove = false;
+        this.stunTimer = 0;
+        this.isDead = false;
+
+        if (type === "chitauri") {
+            this.radius = 16;
+            this.hp = 14 + wave * 4;
+            this.maxHp = this.hp;
+            this.speed = 1.4 + Math.random() * 0.6;
+            this.color = "#a3e635"; 
+            this.dmg = 12;
+        } else if (type === "ultron") {
+            this.radius = 15;
+            this.hp = 12 + wave * 3;
+            this.maxHp = this.hp;
+            this.speed = 2.4 + Math.random() * 0.5;
+            this.color = "#94a3b8"; 
+            this.dmg = 10;
+        } else if (type === "brute") { // 新增：齊塔瑞巨獸小 Boss
+            this.radius = 25;
+            this.hp = 60 + wave * 15;
+            this.maxHp = this.hp;
+            this.speed = 0.9 + Math.random() * 0.2;
+            this.color = "#ea580c"; // 橘紅色
+            this.dmg = 24;
+        } else if (type === "thanos") {
+            this.radius = 36;
+            this.hp = 500 + wave * 100; 
+            this.maxHp = this.hp;
+            this.speed = 0.85;
+            this.color = "#c084fc"; 
+            this.shootCooldown = 60;
+            this.meteorCooldown = 120; // 泰坦隕石冷卻
+        }
+    }
+
+    takeDamage(amount, damageType) {
+        if (this.isDead) return;
+        this.hp -= amount;
+
+        const isCrit = (damageType === "energy" || amount > 20);
+        const floatColor = damageType === "lightning" ? "#c084fc" : (damageType === "web" ? "#f43f5e" : "#ffe600");
+        spawnDamageText(this.x + (Math.random() - 0.5) * 15, this.y, Math.round(amount), floatColor, isCrit);
+
+        spawnExplosion(this.x, this.y, this.color, 3, 0.5);
+
+        if (this.hp <= 0) {
+            this.isDead = true;
+            this.toRemove = true;
+            sfx.playExplosion();
+            
+            spawnExplosion(this.x, this.y, this.color, this.type === "thanos" ? 60 : 15, this.type === "thanos" ? 1.6 : 1);
+            
+            if (this.type === "thanos") {
+                score += 5000;
+                handleGameWin();
+            } else {
+                score += this.type === "brute" ? 500 : 150;
+                hero.ultProgress = Math.min(100, hero.ultProgress + (this.type === "brute" ? 15 : 6) * PERK_MODIFIERS.ultChargeMult);
+            }
+            updateHUD();
+        }
+    }
+
+    update() {
+        if (this.isDead) return;
+
+        if (this.stunTimer > 0) {
+            this.stunTimer--;
+            return; 
+        }
+
+        const dx = hero.x - this.x;
+        const dy = hero.y - this.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+
+        if (dist > 15) {
+            this.x += (dx / dist) * this.speed;
+            this.y += (dy / dist) * this.speed;
+        }
+
+        // 薩諾斯特殊 AI 與隕石技能
+        if (this.type === "thanos") {
+            this.shootCooldown--;
+            if (this.shootCooldown <= 0) {
+                this.shootCooldown = 70;
+                for (let a = 0; a < Math.PI*2; a += Math.PI/4) {
+                    enemyProjectiles.push(new EnemyProjectile(this.x, this.y, a, 4, "#ff0055"));
+                }
+            }
+
+            // 泰坦隕石群召喚 (地面預警圈)
+            this.meteorCooldown--;
+            if (this.meteorCooldown <= 0) {
+                this.meteorCooldown = 180; // 3秒冷卻
+                const targetX = hero.x + (Math.random() - 0.5) * 100;
+                const targetY = hero.y + (Math.random() - 0.5) * 100;
+                meteors.push({
+                    x: targetX,
+                    y: targetY,
+                    radius: 40,
+                    warnTimer: 60, // 1秒預警
+                    landed: false
+                });
+            }
+        }
+
+        // 碰撞英雄傷害
+        if (isColliding(this, hero)) {
+            // 被動格擋等減傷由 Hero.takeDamage 處理
+            hero.takeDamage(this.type === "thanos" ? 1.1 : (this.type === "brute" ? 0.8 : 0.35));
+        }
+    }
+
+    draw(ctx) {
+        if (this.isDead) return;
+
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        if (this.stunTimer > 0) {
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "#38bdf8";
+            ctx.strokeStyle = "#fff";
+            ctx.lineWidth = 2.5;
+            ctx.beginPath(); ctx.arc(0, 0, this.radius + 4, 0, Math.PI*2); ctx.stroke();
+        }
+
+        if (this.type === "chitauri") {
+            ctx.fillStyle = this.color;
+            ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#fbbf24";
+            ctx.fillRect(-6, -6, 12, 4);
+            ctx.fillStyle = "#ef4444";
+            ctx.fillRect(-3, -2, 2, 2);
+            ctx.fillRect(1, -2, 2, 2);
+        } 
+        else if (this.type === "ultron") {
+            ctx.fillStyle = this.color;
+            ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#ef4444";
+            ctx.fillRect(-5, -4, 10, 2);
+            ctx.beginPath(); ctx.arc(0, 3, 3, 0, Math.PI*2); ctx.fill();
+        } 
+        else if (this.type === "brute") {
+            // 齊塔瑞巨獸繪製 (重型外殼與狂暴感)
+            ctx.fillStyle = this.color;
+            ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#78350f"; // 巨型外殼
+            ctx.fillRect(-15, -15, 30, 8);
+            ctx.fillStyle = "#ff0055"; // 巨眼
+            ctx.beginPath(); ctx.arc(0, -3, 6, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(-4, 8, 8, 4); // 獠牙
+        }
+        else if (this.type === "thanos") {
+            ctx.fillStyle = this.color; 
+            ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#fbbf24";
+            ctx.fillRect(-22, -34, 44, 18);
+            ctx.fillRect(-8, -40, 16, 8);
+            ctx.fillRect(-32, -10, 10, 20); 
+            const stonesColors = ["#ef4444", "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899"];
+            stonesColors.forEach((color, i) => {
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(-27, -10 + i * 5, 2.5, 0, Math.PI*2);
+                ctx.fill();
+            });
+            ctx.fillStyle = "#00ffff";
+            ctx.fillRect(-10, -18, 4, 3);
+            ctx.fillRect(6, -18, 4, 3);
+        }
+
+        if (this.hp < this.maxHp) {
+            ctx.fillStyle = "rgba(0,0,0,0.6)";
+            ctx.fillRect(-this.radius, -this.radius - 10, this.radius * 2, 4);
+            ctx.fillStyle = "#ff2222";
+            ctx.fillRect(-this.radius, -this.radius - 10, (this.radius * 2) * (this.hp / this.maxHp), 4);
+        }
+
+        ctx.restore();
+    }
+}
+
+// ==========================================
+// 敵方子彈類別 (EnemyProjectile)
+// ==========================================
+class EnemyProjectile {
+    constructor(x, y, angle, speed, color) {
+        this.x = x;
+        this.y = y;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+        this.color = color;
+        this.radius = 6;
+        this.toRemove = false;
+    }
+
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+
+        if (this.x < 0 || this.x > WIDTH || this.y < 0 || this.y > HEIGHT) {
+            this.toRemove = true;
+        }
+
+        if (isColliding(this, hero)) {
+            hero.takeDamage(9); 
+            this.toRemove = true;
+        }
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = this.color;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+// ==========================================
+// 數據與實體容器
+// ==========================================
+let hero = new Hero("ironman");
+let projectiles = [];
+let enemyProjectiles = [];
+let ultimates = [];
+let enemies = [];
+
+// ==========================================
+// 碰撞處理檢測 (美國隊長盾牌多重彈跳機制)
+// ==========================================
+function checkCollisions() {
+    for (let p of projectiles) {
+        if (p.toRemove) continue;
+
+        for (let enemy of enemies) {
+            if (enemy.toRemove || enemy.isDead) continue;
+
+            if (isColliding(p, enemy)) {
+                if (p.type === "shield" && p.bounceCount < 4) {
+                    enemy.takeDamage(p.damage, p.type);
+                    p.bounceCount++;
+                    p.damage *= 0.9; 
+                    
+                    let neighbors = enemies.filter(e => e !== enemy && !e.isDead);
+                    if (neighbors.length > 0) {
+                        const next = neighbors[0];
+                        const bounceAngle = Math.atan2(next.y - p.y, next.x - p.x);
+                        p.vx = Math.cos(bounceAngle) * p.speed;
+                        p.vy = Math.sin(bounceAngle) * p.speed;
+                        sfx.playShield();
+                    } else {
+                        p.shieldStage = "return";
+                    }
+                    break;
+                } 
+                else {
+                    enemy.takeDamage(p.damage, p.type);
+                    
+                    if (p.type === "web") {
+                        enemy.stunTimer = 35; 
+                    }
+
+                    if (p.type !== "thunderball" && p.type !== "shield") {
+                        p.toRemove = true;
+                        break;
+                    } else if (p.type === "thunderball") {
+                        spawnExplosion(p.x, p.y, p.color, 4, 0.5);
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ==========================================
+// 波次與神盾局升級科技卡池 (Roguelite 核心)
+// ==========================================
+const SHIELD_UPGRADE_CARDS = [
+    { id: "firerate", icon: "⚡", name: "微型核能反應爐", desc: "脈衝冷卻加速，普通攻擊射速提升 20%", effect: () => { PERK_MODIFIERS.fireRate *= 0.8; } },
+    { id: "maxhp", icon: "🛡️", name: "絕境生物裝甲", desc: "全面強化裝甲，最大血量上限增加 30 點", effect: () => { PERK_MODIFIERS.maxHpAdd += 30; } },
+    { id: "speed", icon: "🏃", name: "重力反轉推進靴", desc: "利用引力推進，角色移動速度提升 15%", effect: () => { PERK_MODIFIERS.speedMult *= 1.15; } },
+    { id: "damage", icon: "💥", name: "超頻震金武器核心", desc: "解鎖武器出力，所有普攻基礎傷害增加 5 點", effect: () => { PERK_MODIFIERS.bonusDamage += 5; } },
+    { id: "charge", icon: "🔥", name: "宇宙魔方外流電池", desc: "汲取魔方能量，終極大招的充能效率提升 30%", effect: () => { PERK_MODIFIERS.ultChargeMult *= 1.3; } }
+];
+
+function triggerUpgradeScreen() {
+    gameState = "upgrade";
+    
+    // 隨機抽取3張卡片
+    let shuffled = [...SHIELD_UPGRADE_CARDS].sort(() => 0.5 - Math.random());
+    let selectedCards = shuffled.slice(0, 3);
+    
+    const container = document.getElementById("upgrade-options-container");
+    container.innerHTML = ""; // 清空
+    
+    selectedCards.forEach(card => {
+        let div = document.createElement("div");
+        div.className = "upgrade-card";
+        div.innerHTML = `
+            <div class="upgrade-icon">${card.icon}</div>
+            <div class="upgrade-name">${card.name}</div>
+            <div class="upgrade-desc">${card.desc}</div>
+        `;
+        div.addEventListener("click", () => {
+            card.effect();
+            sfx.playUltimate();
+            document.getElementById("upgrade-overlay").classList.add("hidden");
+            // 升級完成，進入下一波戰局
+            wave++;
+            gameState = "playing";
+            startNewWave();
+        });
+        container.appendChild(div);
+    });
+
+    document.getElementById("upgrade-overlay").classList.remove("hidden");
+}
+
+function startNewWave() {
+    meteors = [];
+    if (wave === 5) {
+        enemies.push(new Enemy(WIDTH / 2, -100, "thanos"));
+    } else {
+        // 隨機混合普通外星兵、奧創以及巨獸小 Boss
+        const spawnCount = 6 + wave * 5;
+        for (let i = 0; i < spawnCount; i++) {
+            const side = Math.floor(Math.random() * 3); 
+            let rx, ry;
+            if (side === 0) {
+                rx = Math.random() * WIDTH;
+                ry = -50 - Math.random() * 150;
+            } else if (side === 1) {
+                rx = -50 - Math.random() * 150;
+                ry = Math.random() * HEIGHT * 0.6;
+            } else {
+                rx = WIDTH + 50 + Math.random() * 150;
+                ry = Math.random() * HEIGHT * 0.6;
+            }
+            
+            let roll = Math.random();
+            let type = "chitauri";
+            if (roll < 0.4) type = "ultron";
+            else if (roll < 0.55 && wave >= 2) type = "brute"; // 巨獸從第2波開始出現
+            
+            enemies.push(new Enemy(rx, ry, type));
+        }
+    }
+    updateHUD();
+}
+
+function handleGameOver() {
+    gameState = "gameover";
+    sfx.playDeath();
+    sfx.stopBGM();
+    document.getElementById('end-title').innerText = "MISSION FAILED";
+    document.getElementById('end-desc').innerText = "防線已被瓦解！薩諾斯奪取了無限寶石...";
+    document.getElementById('end-score').innerText = "最終 SCORE：" + score;
+    document.getElementById('gameover-overlay').classList.remove('hidden');
+}
+
+function handleGameWin() {
+    gameState = "gameover";
+    sfx.playWin();
+    sfx.stopBGM();
+    document.getElementById('end-title').innerText = "SAVIOR OF EARTH!";
+    document.getElementById('end-title').style.color = "#ffe600";
+    document.getElementById('end-desc').innerText = "你成功擊敗了薩諾斯！阻止了宇宙大清洗！";
+    document.getElementById('end-score').innerText = "最終 SCORE：" + score;
+    document.getElementById('gameover-overlay').classList.remove('hidden');
+}
+
+function updateHUD() {
+    document.getElementById('score-text').innerText = "SCORE: " + score.toString().padStart(5, '0');
+    document.getElementById('wave-text').innerText = "WAVE " + wave;
+    
+    // HP / 護盾雙條控制
+    const hpPercent = Math.max(0, (hero.hp / hero.maxHp) * 100);
+    document.getElementById('hp-bar').style.width = hpPercent + "%";
+    
+    const shieldPercent = Math.max(0, (hero.shield / hero.maxShield) * 100);
+    document.getElementById('shield-bar').style.width = shieldPercent + "%";
+
+    // 鋼鐵人改進標題
+    if (hero.type === "ironman") {
+        document.getElementById('armor-hud-label').innerHTML = `🤖 IRONMAN SHIELD: ${Math.round(hero.shield)}%`;
+    } else {
+        document.getElementById('armor-hud-label').innerText = "HERO DEFENSE SYSTEM";
+    }
+
+    document.getElementById('ult-bar').style.width = hero.ultProgress + "%";
+}
+
+// ==========================================
+// 遊戲主循環
+// ==========================================
+function gameLoop() {
+    gameFrame++;
+
+    if (screenShake > 0) screenShake *= 0.88; 
+
+    if (gameState === "playing") {
+        hero.update();
+
+        // 玩家子彈
+        for (let i = projectiles.length - 1; i >= 0; i--) {
+            projectiles[i].update();
+            if (projectiles[i].toRemove) projectiles.splice(i, 1);
+        }
+
+        // 敵方子彈
+        for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
+            enemyProjectiles[i].update();
+            if (enemyProjectiles[i].toRemove) enemyProjectiles.splice(i, 1);
+        }
+
+        // 隕石群處理
+        for (let i = meteors.length - 1; i >= 0; i--) {
+            let m = meteors[i];
+            m.warnTimer--;
+            if (m.warnTimer <= 0 && !m.landed) {
+                m.landed = true;
+                // 地面撞擊
+                sfx.playExplosion();
+                screenShake = 15;
+                spawnExplosion(m.x, m.y, "#ef4444", 25, 1.4);
+                // 判斷英雄是否在隕石中心範圍
+                if (Math.hypot(hero.x - m.x, hero.y - m.y) < m.radius + 15) {
+                    hero.takeDamage(35); // 巨額隕石傷
+                }
+            }
+            // 動畫停留一會兒後移除
+            if (m.warnTimer <= -30) {
+                meteors.splice(i, 1);
+            }
+        }
+
+        // 大招
+        for (let i = ultimates.length - 1; i >= 0; i--) {
+            ultimates[i].update();
+            if (ultimates[i].toRemove) ultimates.splice(i, 1);
+        }
+
+        // 敵軍
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            enemies[i].update();
+            if (enemies[i].toRemove) enemies.splice(i, 1);
+        }
+
+        checkCollisions();
+
+        // 粒子
+        for (let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.alpha -= p.decay;
+            if (p.alpha <= 0) particles.splice(i, 1);
+        }
+
+        // 噴氣微粒
+        for (let i = thrusterParticles.length - 1; i >= 0; i--) {
+            let p = thrusterParticles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.alpha -= p.decay;
+            if (p.alpha <= 0) thrusterParticles.splice(i, 1);
+        }
+
+        // 傷害文字
+        for (let i = damageNumbers.length - 1; i >= 0; i--) {
+            let num = damageNumbers[i];
+            num.x += num.vx;
+            num.y += num.vy;
+            num.vy += 0.15; 
+            num.life--;
+            num.alpha = num.life / 35;
+            if (num.life <= 0) damageNumbers.splice(i, 1);
+        }
+
+        // Roguelite 升級選卡觸發 (當波次怪物被完全消滅且波次小於 5)
+        if (enemies.length === 0 && wave < 5) {
+            triggerUpgradeScreen();
+        }
+    }
+
+    // ================= 渲染 =================
+    ctx.save();
+    if (screenShake > 0.5) {
+        const dx = (Math.random() - 0.5) * screenShake;
+        const dy = (Math.random() - 0.5) * screenShake;
+        ctx.translate(dx, dy);
+    }
+
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+    // 星空背景
+    ctx.fillStyle = "rgba(255, 255, 255, 0.12)";
+    for(let i=0; i<30; i++) {
+        const sx = (Math.sin(gameFrame * 0.002 + i) * 0.5 + 0.5) * WIDTH;
+        const sy = ((gameFrame * 0.1 + i * 50) % HEIGHT);
+        ctx.fillRect(sx, sy, 2, 2);
+    }
+
+    // 繪製隕石預警圈
+    for (let m of meteors) {
+        ctx.save();
+        if (!m.landed) {
+            // 紅色預警虛線
+            ctx.strokeStyle = `rgba(255, 31, 31, ${0.3 + Math.sin(gameFrame * 0.2) * 0.2})`;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(m.x, m.y, m.radius, 0, Math.PI*2);
+            ctx.stroke();
+            // 填充漸變紅
+            ctx.fillStyle = `rgba(255, 31, 31, ${0.1 * (1 - m.warnTimer / 60)})`;
+            ctx.beginPath();
+            ctx.arc(m.x, m.y, m.radius, 0, Math.PI*2);
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    // 繪製大招
+    for (let ult of ultimates) {
+        ult.draw(ctx);
+    }
+
+    // 繪製噴射微粒
+    for (let p of thrusterParticles) {
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    // 繪製碎屑
+    for (let p of particles) {
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    // 繪製敵軍
+    for (let enemy of enemies) {
+        enemy.draw(ctx);
+    }
+
+    // 繪製玩家子彈
+    for (let p of projectiles) {
+        p.draw(ctx);
+    }
+
+    // 繪製敵軍子彈
+    for (let ep of enemyProjectiles) {
+        ep.draw(ctx);
+    }
+
+    // 繪製玩家
+    if (gameState === "playing" || gameState === "upgrade") {
+        hero.draw(ctx);
+    }
+
+    // 傷害文字
+    for (let num of damageNumbers) {
+        ctx.save();
+        ctx.globalAlpha = num.alpha;
+        ctx.font = `${num.weight} ${num.size}px 'Impact'`;
+        ctx.fillStyle = num.color;
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 3;
+        ctx.strokeText(num.text, num.x, num.y);
+        ctx.fillText(num.text, num.x, num.y);
+        ctx.restore();
+    }
+
+    // 科幻準星
+    if (!isMobileMode && gameState === "playing") {
+        ctx.save();
+        ctx.strokeStyle = "rgba(0, 210, 255, 0.75)";
+        ctx.lineWidth = 1.5;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = "#00d2ff";
+        
+        const ringRadius = 10 + Math.sin(gameFrame * 0.15) * 2;
+        ctx.beginPath();
+        ctx.arc(mouse.x, mouse.y, ringRadius, 0, Math.PI*2);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(mouse.x - 14, mouse.y); ctx.lineTo(mouse.x + 14, mouse.y);
+        ctx.moveTo(mouse.x, mouse.y - 14); ctx.lineTo(mouse.x, mouse.y + 14);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    ctx.restore();
+    requestAnimationFrame(gameLoop);
+}
+
+// ==========================================
+// 雙重安全鍵盤與滑鼠事件
+// ==========================================
+window.addEventListener('keydown', e => {
+    if (gameState !== "playing") return;
+    const key = e.key.toLowerCase();
+    if (key === 'a' || key === 'arrowleft') keys.left = true;
+    if (key === 'd' || key === 'arrowright') keys.right = true;
+    if (key === 'w' || key === 'arrowup') keys.up = true;
+    if (key === 's' || key === 'arrowdown') keys.down = true;
+    if (key === ' ' || key === 'spacebar') {
+        keys.ult = true;
+        e.preventDefault();
+    }
+});
+
+window.addEventListener('keyup', e => {
+    const key = e.key.toLowerCase();
+    if (key === 'a' || key === 'arrowleft') keys.left = false;
+    if (key === 'd' || key === 'arrowright') keys.right = false;
+    if (key === 'w' || key === 'arrowup') keys.up = false;
+    if (key === 's' || key === 'arrowdown') keys.down = false;
+    if (key === ' ' || key === 'spacebar') keys.ult = false;
+});
+
+canvas.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = (e.clientX - rect.left) * (WIDTH / rect.width);
+    mouse.y = (e.clientY - rect.top) * (HEIGHT / rect.height);
+});
+
+canvas.addEventListener('mousedown', e => {
+    if (gameState === "playing" && e.button === 0) {
+        keys.mousePressed = true;
+    }
+});
+
+window.addEventListener('mouseup', () => {
+    keys.mousePressed = false;
+});
+
+// ==========================================
+// 手機行動端虛擬按鍵
+// ==========================================
+function setupMobileControls() {
+    const bindControl = (elementId, keyName) => {
+        const btn = document.getElementById(elementId);
+        btn.addEventListener('pointerdown', e => {
+            e.preventDefault();
+            keys[keyName] = true;
+            isMobileMode = true; 
+            btn.releasePointerCapture(e.pointerId);
+        });
+        const stopBtn = e => {
+            e.preventDefault();
+            keys[keyName] = false;
+        };
+        btn.addEventListener('pointerup', stopBtn);
+        btn.addEventListener('pointercancel', stopBtn);
+    };
+
+    bindControl('btn-left', 'left');
+    bindControl('btn-right', 'right');
+    bindControl('btn-up', 'up');
+    bindControl('btn-down', 'down');
+    bindControl('btn-ult', 'ult');
+
+    const fireBtn = document.getElementById('btn-fire');
+    fireBtn.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        isMobileMode = true;
+        keys.mousePressed = true;
+        fireBtn.releasePointerCapture(e.pointerId);
+    });
+    fireBtn.addEventListener('pointerup', e => {
+        e.preventDefault();
+        keys.mousePressed = false;
+    });
+}
+
+// ==========================================
+// 遊戲啟動入口
+// ==========================================
+window.addEventListener('load', () => {
+    setupMobileControls();
+
+    const cards = document.querySelectorAll('.hero-card');
+    cards.forEach(card => {
+        card.addEventListener('click', () => {
+            cards.forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            chosenHero = card.getAttribute('data-hero');
+        });
+    });
+
+    // 聲音按鈕
+    const bgmToggle = document.getElementById("bgm-toggle");
+    bgmToggle.addEventListener("click", () => {
+        const active = sfx.toggleBGM();
+        if (active) {
+            bgmToggle.classList.add("active");
+            bgmToggle.innerText = "🎵 電子BGM: 開啟";
+        } else {
+            bgmToggle.classList.remove("active");
+            bgmToggle.innerText = "🎵 電子BGM: 關閉";
+        }
+    });
+
+    const startBtn = document.getElementById('start-btn');
+    const restartBtn = document.getElementById('restart-btn');
+
+    const startGame = () => {
+        sfx.init();
+        window.focus();
+        canvas.focus();
+
+        document.getElementById('lobby-overlay').classList.add('hidden');
+        document.getElementById('gameover-overlay').classList.add('hidden');
+        document.getElementById('upgrade-overlay').classList.add('hidden');
+
+        gameState = "playing";
+        score = 0;
+        wave = 1;
+        
+        // 重設 Roguelite 乘數
+        PERK_MODIFIERS.fireRate = 1.0;
+        PERK_MODIFIERS.maxHpAdd = 0;
+        PERK_MODIFIERS.speedMult = 1.0;
+        PERK_MODIFIERS.ultChargeMult = 1.0;
+        PERK_MODIFIERS.bonusDamage = 0;
+
+        projectiles = [];
+        enemyProjectiles = [];
+        ultimates = [];
+        enemies = [];
+        particles = [];
+        damageNumbers = [];
+        thrusterParticles = [];
+
+        hero = new Hero(chosenHero);
+        startNewWave();
+    };
+
+    startBtn.addEventListener('click', startGame);
+    restartBtn.addEventListener('click', startGame);
+
+    gameLoop();
+});
+</script>
+</body>
+</html>
